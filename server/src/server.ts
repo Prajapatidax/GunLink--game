@@ -20,10 +20,18 @@ const fastify = Fastify({
 // Enable CORS for frontend clients
 await fastify.register(cors, {
   origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD']
 });
 
-// Health check endpoint
+// Root & Health check endpoints (Prevents Render 404 health check log warnings)
+fastify.get('/', async () => {
+  return { status: 'ok', service: 'GunLink Backend Server', time: new Date().toISOString() };
+});
+
+fastify.head('/', async (request, reply) => {
+  reply.status(200).send();
+});
+
 fastify.get('/health', async () => {
   return { status: 'ok', service: 'GunLink Backend Server', time: new Date().toISOString() };
 });
