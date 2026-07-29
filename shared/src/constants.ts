@@ -1,0 +1,32 @@
+export const GAME_CONSTANTS = {
+  GAME_DURATION_SECONDS: 60,
+  INITIAL_AMMO: 12,
+  MAX_AMMO: 12,
+  RELOAD_TIME_MS: 1500,
+  FIRE_RATE_LIMIT_MS: 120, // Min time between shots (~500 RPM)
+  
+  // Weapon specs
+  DAMAGE_PER_SHOT: 35,
+  HEADSHOT_MULTIPLIER: 2.0,
+  BULLET_SPEED: 85,
+  BULLET_GRAVITY: 0.15,
+
+  // Bot mechanics
+  MAX_BOTS: 6,
+  BOT_RESPAWN_TIME_MS: 2000,
+  BOT_POINTS: {
+    SCOUT: 100,
+    HEAVY: 250,
+    DRONE: 180
+  },
+
+  // Gyro Default Sensitivity & Limits
+  DEFAULT_SENSITIVITY: 1.5,
+  MIN_SENSITIVITY: 0.5,
+  MAX_SENSITIVITY: 3.5,
+  
+  // Network
+  ROOM_CODE_LENGTH: 6,
+  HEARTBEAT_INTERVAL_MS: 5000,
+  ROOM_TTL_SECONDS: 3600
+} as const;
