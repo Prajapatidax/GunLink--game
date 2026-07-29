@@ -1,7 +1,6 @@
 import { Redis } from '@upstash/redis';
 import { RoomState } from '@gunlink/shared';
 
-// Memory Fallback for Zero-Config Local Development
 class InMemoryStore {
   private rooms = new Map<string, RoomState>();
 
@@ -16,10 +15,6 @@ class InMemoryStore {
   async deleteRoom(code: string): Promise<void> {
     this.rooms.delete(code);
   }
-
-  async listRooms(): Promise<RoomState[]> {
-    return Array.from(this.rooms.values());
-  }
 }
 
 class RedisSessionStore {
@@ -30,17 +25,24 @@ class RedisSessionStore {
   constructor() {
     const url = process.env.UPSTASH_REDIS_REST_URL;
     const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    const isProduction = process.env.NODE_ENV === 'production';
 
     if (url && token && !url.includes('YOUR_UPSTASH')) {
       try {
         this.redis = new Redis({ url, token });
         this.isUsingRedis = true;
-        console.log('[Redis] Connected to Upstash Redis Service');
+        console.log('[Redis] ✅ Connected to Upstash Redis Session Cache');
       } catch (err) {
-        console.warn('[Redis] Connection error, using in-memory store:', err);
+        console.error('[Redis] Connection failure:', err);
+        if (isProduction) {
+          throw new Error('PRODUCTION MANDATORY REQUIREMENT: Upstash Redis connection failed. Check UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.');
+        }
       }
     } else {
-      console.log('[Redis] Upstash credentials not set. Running with In-Memory Session Cache.');
+      if (isProduction) {
+        throw new Error('PRODUCTION MANDATORY REQUIREMENT MISSING: UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be configured on Render.');
+      }
+      console.warn('[Redis] Upstash credentials not set. Running with local in-memory fallback (Development Mode).');
     }
   }
 

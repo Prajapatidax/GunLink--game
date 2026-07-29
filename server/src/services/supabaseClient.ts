@@ -12,16 +12,23 @@ class SupabaseService {
   constructor() {
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_ANON_KEY;
+    const isProduction = process.env.NODE_ENV === 'production';
 
     if (url && key && !url.includes('YOUR_SUPABASE')) {
       try {
         this.client = createClient(url, key);
-        console.log('[Supabase] Connected to PostgreSQL Database Service');
+        console.log('[Supabase] ✅ Connected to Supabase PostgreSQL Database');
       } catch (err) {
-        console.warn('[Supabase] Connection error, using in-memory leaderboard:', err);
+        console.error('[Supabase] Connection failure:', err);
+        if (isProduction) {
+          throw new Error('PRODUCTION MANDATORY REQUIREMENT: Supabase connection failed. Check SUPABASE_URL and SUPABASE_ANON_KEY.');
+        }
       }
     } else {
-      console.log('[Supabase] Supabase credentials not set. Running with In-Memory Leaderboard.');
+      if (isProduction) {
+        throw new Error('PRODUCTION MANDATORY REQUIREMENT MISSING: SUPABASE_URL and SUPABASE_ANON_KEY must be configured on Render.');
+      }
+      console.warn('[Supabase] Credentials not set. Running with local in-memory leaderboard (Development Mode).');
     }
   }
 

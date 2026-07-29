@@ -1,4 +1,4 @@
-# 🚀 GunLink Deployment Guide (Vercel + Render)
+# 🚀 GunLink Production Deployment Guide (Vercel + Render)
 
 This guide provides step-by-step instructions for deploying GunLink to production using **Vercel** for the Frontend (Display & Controller web app) and **Render** for the Backend (Node.js Fastify & Socket.IO server).
 
@@ -38,35 +38,44 @@ Render hosts the Node.js Fastify server with WebSocket support (`ws://` / `wss:/
 2. Log into [Render Dashboard](https://dashboard.render.com/) and click **New +** → **Web Service**.
 3. Connect your repository (`Prajapatidax/GunLink--game`).
 
-### 1.2 Configure Service Settings
+### 1.2 Configure Service Settings on Render
+> [!IMPORTANT]
+> **Root Directory Setting**: Leave **Root Directory** empty (or set to `.`) so Render can build `@gunlink/shared` from the monorepo root.
+
 - **Name**: `gunlink-backend`
 - **Environment**: `Node`
-- **Region**: Choose the closest region to your target audience.
+- **Region**: Choose your target region.
 - **Branch**: `main`
-- **Root Directory**: `server`
+- **Root Directory**: *(LEAVE BLANK / ROOT `.`) * Do not enter `server`!
 - **Build Command**:
   ```bash
-  npm install && npm run build
+  npm install && npm run build --workspace=shared && npm run build --workspace=server
   ```
 - **Start Command**:
   ```bash
-  npm run start
+  npm run start --workspace=server
   ```
 
-### 1.3 Set Environment Variables on Render
-Under **Environment Variables** in Render, add:
+---
 
-| Key | Example Value | Description |
+### 1.3 Set MANDATORY Production Environment Variables on Render
+Under **Environment Variables** in Render, add the following required keys:
+
+| Key | Status | Description / Where to Get |
 | :--- | :--- | :--- |
-| `PORT` | `10000` | Port assigned by Render (automatically set by Render) |
-| `HOST` | `0.0.0.0` | Bind host |
-| `UPSTASH_REDIS_REST_URL` | `https://...upstash.io` | (Optional) Upstash Redis URL |
-| `UPSTASH_REDIS_REST_TOKEN` | `A...=` | (Optional) Upstash Token |
-| `SUPABASE_URL` | `https://...supabase.co` | (Optional) Supabase Project URL |
-| `SUPABASE_ANON_KEY` | `eyJ...` | (Optional) Supabase Anon Key |
+| `NODE_ENV` | **REQUIRED** | Set to `production` |
+| `PORT` | Auto | Port assigned by Render (automatically set) |
+| `HOST` | **REQUIRED** | Set to `0.0.0.0` |
+| `UPSTASH_REDIS_REST_URL` | **MANDATORY** | Get REST URL from [Upstash Console](https://console.upstash.com) |
+| `UPSTASH_REDIS_REST_TOKEN` | **MANDATORY** | Get REST token from [Upstash Console](https://console.upstash.com) |
+| `SUPABASE_URL` | **MANDATORY** | Get project URL from [Supabase Dashboard](https://supabase.com/dashboard) |
+| `SUPABASE_ANON_KEY` | **MANDATORY** | Get Anon key from [Supabase Dashboard](https://supabase.com/dashboard) |
+
+> [!CAUTION]
+> If `NODE_ENV=production` is set and Redis/Supabase variables are missing, the server will throw an explicit startup validation error detailing which mandatory key is missing.
 
 4. Click **Deploy Web Service**.
-5. Once deployed, note down your Render Web Service URL (e.g., `https://gunlink-backend.onrender.com`).
+5. Note down your Render Web Service URL (e.g., `https://gunlink-backend.onrender.com`).
 
 ---
 
@@ -95,19 +104,19 @@ Add the following environment variable to link Vercel to your Render backend ser
 *(Replace `https://gunlink-backend.onrender.com` with your exact Render backend URL).*
 
 ### 2.4 Deploy
-Click **Deploy**. Vercel will build and serve your application under a custom domain (e.g. `https://gun-link.vercel.app`).
+Click **Deploy**. Vercel will build and serve your application under a custom HTTPS domain (e.g., `https://gun-link.vercel.app`).
 
 ---
 
-## 🗄️ Step 3: Upstash Redis Setup (Optional Cloud Cache)
+## 🗄️ Step 3: Upstash Redis Setup (Mandatory for Production)
 
 1. Create a free Redis Database at [Upstash](https://upstash.com/).
 2. Copy the `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` from the Upstash console.
-3. Paste these keys into Render environment variables to enable persistent room caching across server restarts.
+3. Paste these keys into Render Environment Variables.
 
 ---
 
-## 📊 Step 4: Supabase PostgreSQL Setup (Optional Leaderboard)
+## 📊 Step 4: Supabase PostgreSQL Setup (Mandatory for Production)
 
 1. Create a project at [Supabase](https://supabase.com/).
 2. In the Supabase SQL Editor, execute the following script to create the leaderboard table:
@@ -132,18 +141,8 @@ CREATE POLICY "Allow public insert" ON leaderboard FOR INSERT WITH CHECK (true);
 
 ---
 
-## 📱 Mobile HTTPS Requirements Note
+## 📱 Mobile HTTPS Requirements
 
 Modern mobile browsers (especially **Safari on iOS 13+**) strictly enforce HTTPS for accessing motion sensors (`DeviceOrientationEvent`).
 
 - Deploying your frontend to **Vercel** automatically provides **HTTPS / SSL certificates**, ensuring the mobile phone controller can seamlessly activate its gyroscope and vibration APIs.
-
----
-
-## ✅ Deployment Checklist
-
-- [x] Backend deployed to Render (`https://gunlink-backend.onrender.com`).
-- [x] CORS allowed on backend for Vercel domain.
-- [x] `VITE_SERVER_URL` set on Vercel pointing to Render URL.
-- [x] QR Code generation tested via mobile browser scan.
-- [x] Mobile Gyroscope aiming verified on live HTTPS site.

@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run build --prefix ../shared && tsc -b && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@gunlink/shared": "1.0.0",
+    "@gunlink/shared": "file:../shared",
     "@react-three/drei": "^10.0.3",
     "@react-three/fiber": "^9.0.4",
     "@react-three/rapier": "^2.1.0",
