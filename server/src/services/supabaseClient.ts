@@ -10,9 +10,18 @@ class SupabaseService {
   ];
 
   constructor() {
-    const url = process.env.SUPABASE_URL?.trim();
+    let url = process.env.SUPABASE_URL?.trim();
     const key = process.env.SUPABASE_ANON_KEY?.trim();
     const isProduction = process.env.NODE_ENV === 'production';
+
+    // Auto-correct if user accidentally passed PostgreSQL DB Connection URI (postgresql://...@db.PROJECT_REF.supabase.co...)
+    if (url && (url.startsWith('postgresql://') || url.startsWith('postgres://'))) {
+      const match = url.match(/@db\.([a-z0-9]+)\.supabase\.co/i) || url.match(/\.([a-z0-9]+)\.supabase\.co/i);
+      if (match && match[1]) {
+        url = `https://${match[1]}.supabase.co`;
+        console.log(`[Supabase] Auto-converted PostgreSQL DB string to Supabase API URL: ${url}`);
+      }
+    }
 
     // Validate URL format before passing to createClient
     const isValidUrl = Boolean(url && (url.startsWith('http://') || url.startsWith('https://')) && !url.includes('YOUR_SUPABASE'));
@@ -30,7 +39,7 @@ class SupabaseService {
     } else {
       if (isProduction) {
         throw new Error(
-          `PRODUCTION MANDATORY REQUIREMENT MISSING: SUPABASE_URL must be a valid URL (starting with https://) and SUPABASE_ANON_KEY must be set on Render. Received SUPABASE_URL="${url || ''}"`
+          `PRODUCTION MANDATORY REQUIREMENT MISSING: SUPABASE_URL must be an HTTPS URL (e.g. https://<project-id>.supabase.co) and SUPABASE_ANON_KEY must be set on Render. Received SUPABASE_URL="${url || ''}"`
         );
       }
       console.warn('[Supabase] Credentials missing or invalid. Running with local in-memory leaderboard (Development Mode).');
