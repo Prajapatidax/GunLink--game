@@ -1,3 +1,3 @@
-export * from './types';
-export * from './socketEvents';
-export * from './constants';
+export type * from './types.js';
+export * from './socketEvents.js';
+export * from './constants.js';
