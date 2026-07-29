@@ -10,25 +10,30 @@ class SupabaseService {
   ];
 
   constructor() {
-    const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_ANON_KEY;
+    const url = process.env.SUPABASE_URL?.trim();
+    const key = process.env.SUPABASE_ANON_KEY?.trim();
     const isProduction = process.env.NODE_ENV === 'production';
 
-    if (url && key && !url.includes('YOUR_SUPABASE')) {
+    // Validate URL format before passing to createClient
+    const isValidUrl = Boolean(url && (url.startsWith('http://') || url.startsWith('https://')) && !url.includes('YOUR_SUPABASE'));
+
+    if (isValidUrl && key && !key.includes('YOUR_SUPABASE')) {
       try {
-        this.client = createClient(url, key);
+        this.client = createClient(url!, key);
         console.log('[Supabase] ✅ Connected to Supabase PostgreSQL Database');
       } catch (err) {
-        console.error('[Supabase] Connection failure:', err);
+        console.error('[Supabase] Connection initialization failure:', err);
         if (isProduction) {
-          throw new Error('PRODUCTION MANDATORY REQUIREMENT: Supabase connection failed. Check SUPABASE_URL and SUPABASE_ANON_KEY.');
+          throw new Error('PRODUCTION MANDATORY REQUIREMENT: Supabase connection failed. Verify SUPABASE_URL and SUPABASE_ANON_KEY on Render.');
         }
       }
     } else {
       if (isProduction) {
-        throw new Error('PRODUCTION MANDATORY REQUIREMENT MISSING: SUPABASE_URL and SUPABASE_ANON_KEY must be configured on Render.');
+        throw new Error(
+          `PRODUCTION MANDATORY REQUIREMENT MISSING: SUPABASE_URL must be a valid URL (starting with https://) and SUPABASE_ANON_KEY must be set on Render. Received SUPABASE_URL="${url || ''}"`
+        );
       }
-      console.warn('[Supabase] Credentials not set. Running with local in-memory leaderboard (Development Mode).');
+      console.warn('[Supabase] Credentials missing or invalid. Running with local in-memory leaderboard (Development Mode).');
     }
   }
 

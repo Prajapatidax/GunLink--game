@@ -23,13 +23,15 @@ class RedisSessionStore {
   public isUsingRedis = false;
 
   constructor() {
-    const url = process.env.UPSTASH_REDIS_REST_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
     const isProduction = process.env.NODE_ENV === 'production';
 
-    if (url && token && !url.includes('YOUR_UPSTASH')) {
+    const isValidUrl = Boolean(url && (url.startsWith('http://') || url.startsWith('https://')) && !url.includes('YOUR_UPSTASH'));
+
+    if (isValidUrl && token && !token.includes('YOUR_UPSTASH')) {
       try {
-        this.redis = new Redis({ url, token });
+        this.redis = new Redis({ url: url!, token });
         this.isUsingRedis = true;
         console.log('[Redis] ✅ Connected to Upstash Redis Session Cache');
       } catch (err) {
@@ -40,9 +42,11 @@ class RedisSessionStore {
       }
     } else {
       if (isProduction) {
-        throw new Error('PRODUCTION MANDATORY REQUIREMENT MISSING: UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be configured on Render.');
+        throw new Error(
+          `PRODUCTION MANDATORY REQUIREMENT MISSING: UPSTASH_REDIS_REST_URL must be a valid URL (starting with https://) and UPSTASH_REDIS_REST_TOKEN must be set on Render. Received UPSTASH_REDIS_REST_URL="${url || ''}"`
+        );
       }
-      console.warn('[Redis] Upstash credentials not set. Running with local in-memory fallback (Development Mode).');
+      console.warn('[Redis] Upstash credentials not set or invalid. Running with local in-memory store (Development Mode).');
     }
   }
 
