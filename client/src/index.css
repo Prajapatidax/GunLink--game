@@ -16,36 +16,43 @@
   font-family: var(--font-mono);
 }
 
-/* Glassmorphism Styles */
-.glass-panel {
-  background: rgba(10, 16, 32, 0.65);
+/* Dark Mode Glassmorphism */
+.dark .glass-panel {
+  background: rgba(10, 16, 32, 0.75);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(0, 240, 255, 0.18);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 }
 
-.glass-panel-glow {
-  background: rgba(12, 20, 40, 0.75);
+.dark .glass-panel-glow {
+  background: rgba(12, 20, 40, 0.85);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(0, 240, 255, 0.35);
-  box-shadow: 0 0 25px rgba(0, 240, 255, 0.25), inset 0 0 15px rgba(0, 240, 255, 0.1);
+  border: 1px solid rgba(0, 240, 255, 0.45);
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.3), inset 0 0 15px rgba(0, 240, 255, 0.15);
 }
 
-.glass-danger {
-  background: rgba(40, 10, 20, 0.75);
+/* Light Mode Glassmorphism */
+.light .glass-panel {
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 0, 85, 0.35);
-  box-shadow: 0 0 20px rgba(255, 0, 85, 0.25);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 140, 255, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(0, 80, 200, 0.12);
+  color: #0f172a;
+}
+
+.light .glass-panel-glow {
+  background: rgba(240, 248, 255, 0.92);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 140, 255, 0.5);
+  box-shadow: 0 0 25px rgba(0, 140, 255, 0.25), inset 0 0 15px rgba(0, 140, 255, 0.1);
+  color: #0f172a;
 }
 
 /* Glow Effects */
 .text-cyan-glow {
   text-shadow: 0 0 10px rgba(0, 240, 255, 0.7), 0 0 20px rgba(0, 240, 255, 0.4);
-}
-
-.text-red-glow {
-  text-shadow: 0 0 10px rgba(255, 0, 85, 0.8), 0 0 25px rgba(255, 0, 85, 0.5);
 }
 
 .glow-btn-cyan {
@@ -58,28 +65,19 @@
   transform: translateY(-2px);
 }
 
-.glow-btn-cyan:active {
-  transform: translateY(1px);
-}
-
 /* Grid Background */
-.bg-grid-cyber {
+.dark .bg-grid-cyber {
   background-size: 40px 40px;
   background-image: 
-    linear-gradient(to right, rgba(0, 240, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
+    linear-gradient(to right, rgba(0, 240, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 240, 255, 0.06) 1px, transparent 1px);
 }
 
-/* Scanline Overlay */
-.scanlines {
-  background: linear-gradient(
-    to bottom,
-    rgba(255, 255, 255, 0),
-    rgba(255, 255, 255, 0) 50%,
-    rgba(0, 0, 0, 0.3) 50%,
-    rgba(0, 0, 0, 0.3)
-  );
-  background-size: 100% 4px;
+.light .bg-grid-cyber {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 100, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 100, 255, 0.08) 1px, transparent 1px);
 }
 
 /* Radar pulse animation */
@@ -91,15 +89,4 @@
 
 .animate-pulse-ring {
   animation: pulse-ring 2s infinite ease-in-out;
-}
-
-/* Crosshair pulse */
-@keyframes recoil-shake {
-  0% { transform: scale(1); }
-  30% { transform: scale(1.25) rotate(-3deg); }
-  100% { transform: scale(1) rotate(0deg); }
-}
-
-.recoil-shake {
-  animation: recoil-shake 0.15s ease-out;
 }

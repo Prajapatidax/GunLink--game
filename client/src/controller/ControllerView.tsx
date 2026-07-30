@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Smartphone, Wifi, Sliders, ShieldAlert, KeyRound, QrCode } from 'lucide-react';
+import { Smartphone, Wifi, Sliders, ShieldAlert, KeyRound, QrCode, Camera, Sun, Moon } from 'lucide-react';
 import { useDeviceOrientation } from './hooks/useDeviceOrientation';
 import { TriggerButton } from './components/TriggerButton';
 import { QuickActions } from './components/QuickActions';
 import { OrientationPreview } from './components/OrientationPreview';
 import { SettingsDrawer } from './components/SettingsDrawer';
+import { QRCameraScanner } from './components/QRCameraScanner';
 import { socketClient } from '../shared/socket/socketClient';
 import { useGameStore } from '../shared/store/useGameStore';
 
@@ -15,11 +16,14 @@ export const ControllerView: React.FC = () => {
   const [inputCode, setInputCode] = useState<string>('');
   const [isJoined, setIsJoined] = useState<boolean>(false);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [isCameraScannerOpen, setIsCameraScannerOpen] = useState<boolean>(false);
 
   const [sensitivity, setSensitivity] = useState<number>(1.5);
   const [vibrationEnabled, setVibrationEnabled] = useState<boolean>(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
+  const theme = useGameStore((s) => s.theme);
+  const toggleTheme = useGameStore((s) => s.toggleTheme);
   const latencyMs = useGameStore((s) => s.latencyMs);
 
   // Extract room from URL query params (e.g. /#/controller?room=CODE)
@@ -50,8 +54,15 @@ export const ControllerView: React.FC = () => {
     setIsJoined(true);
   };
 
+  const handleScanSuccess = (scannedCode: string) => {
+    setInputCode(scannedCode);
+    setRoomCode(scannedCode);
+    socketClient.joinRoom(scannedCode);
+    setIsJoined(true);
+  };
+
   return (
-    <div className="min-h-screen w-full bg-[#060913] text-slate-100 flex flex-col justify-between select-none touch-none overflow-hidden">
+    <div className={`min-h-screen w-full flex flex-col justify-between select-none touch-none overflow-hidden transition-colors ${theme === 'dark' ? 'bg-[#060913] text-slate-100 dark' : 'bg-slate-100 text-slate-900 light'}`}>
       {/* Header Bar */}
       <header className="w-full px-4 py-3 flex items-center justify-between glass-panel border-b border-[#00f0ff]/20">
         <div className="flex items-center gap-2">
@@ -59,13 +70,18 @@ export const ControllerView: React.FC = () => {
           <span className="font-heading font-extrabold text-sm text-[#00f0ff] tracking-wider">GUNLINK CONTROLLER</span>
         </div>
 
-        <div className="flex items-center gap-3 text-xs font-mono-tech">
+        <div className="flex items-center gap-2 text-xs font-mono-tech">
           {isJoined && (
             <div className="flex items-center gap-1.5 bg-[#00f0ff]/10 px-2.5 py-1 rounded-lg border border-[#00f0ff]/30 text-[#00f0ff]">
               <Wifi className="w-3.5 h-3.5" />
               <span>{latencyMs}ms</span>
             </div>
           )}
+
+          {/* Theme Toggle Button */}
+          <button onClick={toggleTheme} className="p-2 text-slate-300 hover:text-[#00f0ff] cursor-pointer">
+            {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-indigo-600" />}
+          </button>
 
           <button onClick={() => setIsSettingsOpen(true)} className="p-2 text-slate-300 hover:text-[#00f0ff] cursor-pointer">
             <Sliders className="w-5 h-5" />
@@ -78,7 +94,7 @@ export const ControllerView: React.FC = () => {
         /* Permission Grant Step */
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
           <ShieldAlert className="w-16 h-16 text-[#00f0ff] animate-bounce mb-4" />
-          <h2 className="text-2xl font-black font-heading mb-2 text-slate-100">ENABLE GYROSCOPE</h2>
+          <h2 className="text-2xl font-black font-heading mb-2">ENABLE GYROSCOPE</h2>
           <p className="text-slate-400 text-sm mb-6 max-w-xs">
             GunLink requires smartphone physical motion sensor access to tilt and aim your weapon in real time.
           </p>
@@ -90,18 +106,33 @@ export const ControllerView: React.FC = () => {
           </button>
         </div>
       ) : !isJoined ? (
-        /* Dual Entry Options Step (QR Auto-Detect OR Manual Code Input) */
+        /* Dual Entry Options Step (QR Camera Scanner OR Manual Code Input) */
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
           <div className="w-14 h-14 rounded-2xl bg-[#00f0ff]/10 border border-[#00f0ff]/30 flex items-center justify-center text-[#00f0ff] mb-4">
             <KeyRound className="w-7 h-7" />
           </div>
 
-          <h2 className="text-3xl font-black font-heading mb-1 text-slate-100">PAIR WITH DISPLAY</h2>
+          <h2 className="text-3xl font-black font-heading mb-1">PAIR WITH DISPLAY</h2>
           <p className="text-slate-400 text-xs font-mono-tech mb-6 uppercase tracking-wider">
-            ENTER THE 6-CHARACTER CODE SHOWN ON YOUR DESKTOP SCREEN
+            SCAN QR CODE OR ENTER THE 6-CHARACTER ROOM CODE
           </p>
 
           <div className="w-full max-w-xs space-y-4">
+            {/* Live Camera Scanner Trigger */}
+            <button
+              onClick={() => setIsCameraScannerOpen(true)}
+              className="w-full py-3.5 rounded-2xl bg-[#00f0ff]/15 border-2 border-[#00f0ff]/40 text-[#00f0ff] font-heading font-bold text-sm flex items-center justify-center gap-2.5 hover:bg-[#00f0ff]/25 transition-all cursor-pointer shadow-md"
+            >
+              <Camera className="w-5 h-5" />
+              <span>SCAN QR CODE WITH CAMERA</span>
+            </button>
+
+            <div className="relative py-1">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-700" /></div>
+              <div className="relative flex justify-center text-xs text-slate-400 font-mono-tech bg-[#060913] px-2 uppercase">OR ENTER MANUAL CODE</div>
+            </div>
+
+            {/* Manual Code Input */}
             <input
               type="text"
               maxLength={6}
@@ -117,18 +148,8 @@ export const ControllerView: React.FC = () => {
               onClick={handleManualJoin}
               className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#00f0ff] to-[#00a2ff] text-slate-950 font-black font-heading text-lg glow-btn-cyan cursor-pointer"
             >
-              CONNECT TO ROOM
+              CONNECT ROOM CODE
             </button>
-
-            <div className="relative py-2">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-800" /></div>
-              <div className="relative flex justify-center text-xs text-slate-500 font-mono-tech bg-[#060913] px-2 uppercase">OR</div>
-            </div>
-
-            <div className="text-xs text-slate-400 font-mono-tech flex items-center justify-center gap-2">
-              <QrCode className="w-4 h-4 text-[#00f0ff]" />
-              <span>Scan QR code using your phone camera</span>
-            </div>
           </div>
         </div>
       ) : (
@@ -161,6 +182,13 @@ export const ControllerView: React.FC = () => {
         onSensitivityChange={setSensitivity}
         vibrationEnabled={vibrationEnabled}
         onToggleVibration={() => setVibrationEnabled(!vibrationEnabled)}
+      />
+
+      {/* Live Camera Scanner Modal */}
+      <QRCameraScanner
+        isOpen={isCameraScannerOpen}
+        onClose={() => setIsCameraScannerOpen(false)}
+        onScanSuccess={handleScanSuccess}
       />
     </div>
   );

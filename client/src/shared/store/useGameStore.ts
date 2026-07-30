@@ -11,6 +11,7 @@ import {
 } from '@gunlink/shared';
 
 export type GamePhase = 'LANDING' | 'LOBBY' | 'COUNTDOWN' | 'PLAYING' | 'ENDED';
+export type ThemeMode = 'dark' | 'light';
 
 interface GameStoreState {
   // Socket & Room
@@ -20,8 +21,9 @@ interface GameStoreState {
   isControllerConnected: boolean;
   latencyMs: number;
 
-  // Game Lifecycle
+  // Game Lifecycle & Theme
   gamePhase: GamePhase;
+  theme: ThemeMode;
   countdown: number;
   timeRemaining: number;
   currentLevel: LevelId;
@@ -62,6 +64,7 @@ interface GameStoreState {
   setControllerConnected: (connected: boolean) => void;
   setLatency: (ms: number) => void;
   setGamePhase: (phase: GamePhase) => void;
+  toggleTheme: () => void;
 
   updateOrientation: (data: OrientationData) => void;
   recenterGyro: () => void;
@@ -93,8 +96,9 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   isControllerConnected: false,
   latencyMs: 0,
 
-  // Game Lifecycle
+  // Game Lifecycle & Theme
   gamePhase: 'LANDING',
+  theme: 'dark',
   countdown: 3,
   timeRemaining: GAME_CONSTANTS.GAME_DURATION_SECONDS,
   currentLevel: 'TRAINING',
@@ -135,6 +139,20 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   setControllerConnected: (connected) => set({ isControllerConnected: connected }),
   setLatency: (ms) => set({ latencyMs: ms }),
   setGamePhase: (phase) => set({ gamePhase: phase }),
+
+  toggleTheme: () => {
+    const nextTheme = get().theme === 'dark' ? 'light' : 'dark';
+    if (typeof document !== 'undefined') {
+      if (nextTheme === 'light') {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.add('light');
+      } else {
+        document.documentElement.classList.remove('light');
+        document.documentElement.classList.add('dark');
+      }
+    }
+    set({ theme: nextTheme });
+  },
 
   updateOrientation: (data) => {
     const { calibratedOffset, sensitivity } = get();

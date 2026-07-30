@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Smartphone, Zap, Volume2, VolumeX, RefreshCw, Activity, Target, Layers, ShieldAlert } from 'lucide-react';
+import { Smartphone, Zap, Volume2, VolumeX, RefreshCw, Activity, Target, Layers, Sun, Moon } from 'lucide-react';
 import { WEAPON_REGISTRY, LEVEL_REGISTRY, WeaponId, LevelId } from '@gunlink/shared';
 import { useGameStore } from '../../shared/store/useGameStore';
 
@@ -17,6 +17,8 @@ export const HUD: React.FC = () => {
   const latencyMs = useGameStore((s) => s.latencyMs);
   const soundEnabled = useGameStore((s) => s.soundEnabled);
   const toggleSound = useGameStore((s) => s.toggleSound);
+  const theme = useGameStore((s) => s.theme);
+  const toggleTheme = useGameStore((s) => s.toggleTheme);
   const gamePhase = useGameStore((s) => s.gamePhase);
 
   const currentWeapon = useGameStore((s) => s.currentWeapon);
@@ -124,7 +126,7 @@ export const HUD: React.FC = () => {
           </div>
         </div>
 
-        {/* Weapon Arsenal Switcher & Audio Controls */}
+        {/* Weapon Arsenal Switcher, Theme & Audio Controls */}
         <div className="flex items-center gap-3 pointer-events-auto">
           {/* Weapon Selector Dropdown */}
           <div className="glass-panel px-4 py-2 rounded-xl border border-[#00f0ff]/40 flex items-center gap-2">
@@ -141,6 +143,15 @@ export const HUD: React.FC = () => {
               ))}
             </select>
           </div>
+
+          {/* Theme Toggle Button */}
+          <button
+            onClick={toggleTheme}
+            className="glass-panel p-3 rounded-xl hover:bg-[#00f0ff]/20 text-[#00f0ff] transition-all cursor-pointer"
+            title="Toggle Light / Dark Theme"
+          >
+            {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-indigo-600" />}
+          </button>
 
           <button
             onClick={toggleSound}
