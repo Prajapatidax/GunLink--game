@@ -1,5 +1,14 @@
 import { create } from 'zustand';
-import { RoomState, OrientationData, GAME_CONSTANTS, BotData, LeaderboardEntry } from '@gunlink/shared';
+import {
+  RoomState,
+  OrientationData,
+  GAME_CONSTANTS,
+  LeaderboardEntry,
+  WeaponId,
+  LevelId,
+  WEAPON_REGISTRY,
+  LEVEL_REGISTRY
+} from '@gunlink/shared';
 
 export type GamePhase = 'LANDING' | 'LOBBY' | 'COUNTDOWN' | 'PLAYING' | 'ENDED';
 
@@ -15,6 +24,8 @@ interface GameStoreState {
   gamePhase: GamePhase;
   countdown: number;
   timeRemaining: number;
+  currentLevel: LevelId;
+  currentWeapon: WeaponId;
 
   // Phone Orientation & Aiming
   rawOrientation: OrientationData;
@@ -26,11 +37,12 @@ interface GameStoreState {
   ammo: number;
   maxAmmo: number;
   isReloading: boolean;
-  recoilTriggered: number; // timestamp to trigger recoil spring
+  recoilTriggered: number;
   muzzleFlashTriggered: number;
 
-  // Scoring & Performance
+  // Scoring & Stats
   score: number;
+  kills: number;
   combo: number;
   maxCombo: number;
   shotsFired: number;
@@ -55,7 +67,10 @@ interface GameStoreState {
   recenterGyro: () => void;
   setSensitivity: (sens: number) => void;
 
-  triggerShot: () => boolean; // returns true if shot executed
+  selectWeapon: (weaponId: WeaponId) => void;
+  selectLevel: (levelId: LevelId) => void;
+
+  triggerShot: () => boolean;
   reloadWeapon: () => void;
   finishReload: () => void;
 
@@ -82,6 +97,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   gamePhase: 'LANDING',
   countdown: 3,
   timeRemaining: GAME_CONSTANTS.GAME_DURATION_SECONDS,
+  currentLevel: 'TRAINING',
+  currentWeapon: 'PISTOL',
 
   // Orientation
   rawOrientation: { alpha: 0, beta: 0, gamma: 0, timestamp: Date.now() },
@@ -90,14 +107,15 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   sensitivity: GAME_CONSTANTS.DEFAULT_SENSITIVITY,
 
   // Weapon
-  ammo: GAME_CONSTANTS.INITIAL_AMMO,
-  maxAmmo: GAME_CONSTANTS.MAX_AMMO,
+  ammo: WEAPON_REGISTRY.PISTOL.magazineSize,
+  maxAmmo: WEAPON_REGISTRY.PISTOL.magazineSize,
   isReloading: false,
   recoilTriggered: 0,
   muzzleFlashTriggered: 0,
 
   // Scoring
   score: 0,
+  kills: 0,
   combo: 0,
   maxCombo: 0,
   shotsFired: 0,
@@ -120,7 +138,6 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
   updateOrientation: (data) => {
     const { calibratedOffset, sensitivity } = get();
-    // Normalize angles with calibration zero
     let rawYaw = data.alpha - calibratedOffset.alpha;
     if (rawYaw > 180) rawYaw -= 360;
     if (rawYaw < -180) rawYaw += 360;
@@ -129,11 +146,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     if (rawPitch > 180) rawPitch -= 360;
     if (rawPitch < -180) rawPitch += 360;
 
-    // Convert degrees to pitch (vertical angle rad) and yaw (horizontal angle rad)
     const yawRad = (rawYaw * (Math.PI / 180)) * sensitivity;
     const pitchRad = (rawPitch * (Math.PI / 180)) * sensitivity;
-
-    // Clamp pitch between -1.2 rad (~-70 deg) and 1.2 rad (~70 deg)
     const clampedPitch = Math.max(-1.2, Math.min(1.2, pitchRad));
 
     set({
@@ -156,6 +170,20 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
   setSensitivity: (sens) => set({ sensitivity: sens }),
 
+  selectWeapon: (weaponId) => {
+    const stats = WEAPON_REGISTRY[weaponId] || WEAPON_REGISTRY.PISTOL;
+    set({
+      currentWeapon: weaponId,
+      ammo: stats.magazineSize,
+      maxAmmo: stats.magazineSize,
+      isReloading: false
+    });
+  },
+
+  selectLevel: (levelId) => {
+    set({ currentLevel: levelId });
+  },
+
   triggerShot: () => {
     const { ammo, isReloading, gamePhase } = get();
     if (isReloading || ammo <= 0 || gamePhase !== 'PLAYING') {
@@ -170,7 +198,6 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       muzzleFlashTriggered: now
     }));
 
-    // Auto reload if out of ammo
     if (get().ammo <= 0) {
       get().reloadWeapon();
     }
@@ -179,38 +206,42 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   },
 
   reloadWeapon: () => {
-    const { isReloading, ammo, maxAmmo } = get();
+    const { isReloading, ammo, maxAmmo, currentWeapon } = get();
     if (isReloading || ammo === maxAmmo) return;
 
+    const stats = WEAPON_REGISTRY[currentWeapon] || WEAPON_REGISTRY.PISTOL;
     set({ isReloading: true });
 
     setTimeout(() => {
       get().finishReload();
-    }, GAME_CONSTANTS.RELOAD_TIME_MS);
+    }, stats.reloadTimeMs);
   },
 
   finishReload: () => {
+    const { currentWeapon } = get();
+    const stats = WEAPON_REGISTRY[currentWeapon] || WEAPON_REGISTRY.PISTOL;
     set({
-      ammo: GAME_CONSTANTS.MAX_AMMO,
+      ammo: stats.magazineSize,
+      maxAmmo: stats.magazineSize,
       isReloading: false
     });
   },
 
   registerHit: (botId, isHeadshot = false) => {
     const now = Date.now();
-    const { combo, lastHitTime, maxCombo } = get();
+    const { combo, lastHitTime } = get();
 
-    // Reset combo if more than 3.0s between hits
     const isComboActive = now - lastHitTime < 3000;
     const nextCombo = isComboActive ? combo + 1 : 1;
     const multiplier = Math.min(4, 1 + Math.floor(nextCombo / 3) * 0.5);
 
-    const basePoints = GAME_CONSTANTS.BOT_POINTS.SCOUT;
-    const headshotBonus = isHeadshot ? GAME_CONSTANTS.HEADSHOT_MULTIPLIER : 1.0;
+    const basePoints = 100;
+    const headshotBonus = isHeadshot ? 2.0 : 1.0;
     const pointsGained = Math.round(basePoints * multiplier * headshotBonus);
 
     set((state) => ({
       score: state.score + pointsGained,
+      kills: state.kills + 1,
       combo: nextCombo,
       maxCombo: Math.max(state.maxCombo, nextCombo),
       shotsHit: state.shotsHit + 1,
@@ -230,15 +261,20 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   },
 
   startGame: () => {
+    const { currentWeapon } = get();
+    const stats = WEAPON_REGISTRY[currentWeapon] || WEAPON_REGISTRY.PISTOL;
+
     set({
       gamePhase: 'PLAYING',
       timeRemaining: GAME_CONSTANTS.GAME_DURATION_SECONDS,
       score: 0,
+      kills: 0,
       combo: 0,
       maxCombo: 0,
       shotsFired: 0,
       shotsHit: 0,
-      ammo: GAME_CONSTANTS.MAX_AMMO,
+      ammo: stats.magazineSize,
+      maxAmmo: stats.magazineSize,
       isReloading: false
     });
   },

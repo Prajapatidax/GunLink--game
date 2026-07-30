@@ -1,3 +1,49 @@
+export type WeaponId = 'PISTOL' | 'RIFLE' | 'SHOTGUN' | 'SNIPER' | 'SMG' | 'ROCKET' | 'LASER';
+
+export type EnemyTypeId = 'ROBOT' | 'ZOMBIE' | 'ALIEN' | 'SOLDIER' | 'ANIMAL' | 'DRONE' | 'BOSS';
+
+export type LevelId = 'TRAINING' | 'WAREHOUSE' | 'CITY' | 'LABORATORY' | 'INDUSTRIAL';
+
+export type EnemyAIState = 'IDLE' | 'PATROL' | 'SEARCH' | 'ATTACK' | 'HIT' | 'DEAD' | 'RESPAWN';
+
+export interface WeaponStats {
+  id: WeaponId;
+  name: string;
+  damage: number;
+  fireRateMs: number;
+  magazineSize: number;
+  reloadTimeMs: number;
+  recoilIntensity: number;
+  bulletSpeed: number;
+  soundType: 'PISTOL' | 'RIFLE' | 'SHOTGUN' | 'SNIPER' | 'LASER';
+  muzzleColor: string;
+  headshotMultiplier: number;
+}
+
+export interface EnemyConfig {
+  typeId: EnemyTypeId;
+  name: string;
+  health: number;
+  maxHealth: number;
+  speed: number;
+  damage: number;
+  detectionRadius: number;
+  scoreReward: number;
+  headOffset: number;
+  boundingRadius: number;
+}
+
+export interface LevelConfig {
+  id: LevelId;
+  name: string;
+  description: string;
+  lightColor: string;
+  fogColor: string;
+  groundColor: string;
+  accentColor: string;
+  maxEnemies: number;
+}
+
 export interface OrientationData {
   alpha: number; // Z-axis rotation (0..360)
   beta: number;  // X-axis tilt (-180..180)
@@ -29,22 +75,20 @@ export interface RoomState {
   createdAt: number;
 }
 
-export type BotState = 'IDLE' | 'PATROL' | 'SEARCH' | 'HIT' | 'DEAD';
-
 export interface BotData {
   id: string;
+  type: EnemyTypeId;
   position: [number, number, number];
   rotation: number;
-  state: BotState;
+  state: EnemyAIState;
   health: number;
   maxHealth: number;
   speed: number;
-  type: 'SCOUT' | 'HEAVY' | 'DRONE';
-  radius: number;
 }
 
 export interface ShotData {
   id: string;
+  weaponId: WeaponId;
   origin: [number, number, number];
   direction: [number, number, number];
   speed: number;
@@ -60,13 +104,15 @@ export interface HitData {
 
 export interface GameScoreState {
   score: number;
+  kills: number;
   multiplier: number;
   combo: number;
   shotsFired: number;
   shotsHit: number;
   accuracy: number;
   timeRemaining: number;
-  highScore: number;
+  currentLevel: LevelId;
+  currentWeapon: WeaponId;
 }
 
 export interface LeaderboardEntry {
