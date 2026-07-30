@@ -25,7 +25,7 @@ class ModelErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryStat
   }
 
   componentDidCatch(error: any) {
-    console.warn('[ModelLoader] GLB model error, rendering procedural 3D fallback:', error);
+    console.warn('[ModelLoader] Error loading 3D GLB model, using fallback:', error);
   }
 
   render() {
@@ -36,48 +36,34 @@ class ModelErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryStat
   }
 }
 
-const SafeGLBModelMesh: React.FC<{ url: string; fallback: ReactNode }> = ({ url, fallback }) => {
-  try {
-    const { scene } = useGLTF(url);
-    if (!scene) return <>{fallback}</>;
-    return <primitive object={scene.clone()} />;
-  } catch (err) {
-    return <>{fallback}</>;
-  }
+const GLBModelMesh: React.FC<{ url: string }> = ({ url }) => {
+  const { scene } = useGLTF(url);
+  return <primitive object={scene.clone()} />;
 };
 
-// Enemy Model Loader: Renders procedural 3D fallback model by default if GLB is missing
+// Enemy GLB 3D Model Loader
 export const EnemyModelLoader: React.FC<{ typeId: EnemyTypeId; isHit?: boolean }> = ({ typeId, isHit }) => {
   const fallbackMesh = <EnemyFallbackRenderer typeId={typeId} isHit={isHit} />;
   const assetPath = ASSET_REGISTRY.models.enemies[typeId];
 
-  // If asset path is default placeholder path, directly render high-quality procedural 3D fallback
-  if (!assetPath || assetPath.includes('/assets/models/')) {
-    return fallbackMesh;
-  }
-
   return (
     <ModelErrorBoundary fallback={fallbackMesh}>
       <Suspense fallback={fallbackMesh}>
-        <SafeGLBModelMesh url={assetPath} fallback={fallbackMesh} />
+        <GLBModelMesh url={assetPath} />
       </Suspense>
     </ModelErrorBoundary>
   );
 };
 
-// Weapon Model Loader: Renders procedural 3D weapon model by default if GLB is missing
+// Weapon GLB 3D Model Loader
 export const WeaponModelLoader: React.FC<{ weaponId: WeaponId; muzzleFlash?: boolean }> = ({ weaponId, muzzleFlash }) => {
   const fallbackMesh = <WeaponFallbackRenderer weaponId={weaponId} muzzleFlash={muzzleFlash} />;
   const assetPath = ASSET_REGISTRY.models.weapons[weaponId];
 
-  if (!assetPath || assetPath.includes('/assets/models/')) {
-    return fallbackMesh;
-  }
-
   return (
     <ModelErrorBoundary fallback={fallbackMesh}>
       <Suspense fallback={fallbackMesh}>
-        <SafeGLBModelMesh url={assetPath} fallback={fallbackMesh} />
+        <GLBModelMesh url={assetPath} />
       </Suspense>
     </ModelErrorBoundary>
   );
