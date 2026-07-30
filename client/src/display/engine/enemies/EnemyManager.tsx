@@ -7,27 +7,28 @@ import { EnemyModelLoader } from '../assets/ModelLoader';
 import { useGameStore } from '../../../shared/store/useGameStore';
 import { soundManager } from '../../audio/SoundManager';
 
+const createDefaultEnemies = (): EnemyInstance[] => [
+  EnemyBase.createInstance('e_robot_1', 'ROBOT', new THREE.Vector3(-3.5, 0, -7)),
+  EnemyBase.createInstance('e_zombie_1', 'ZOMBIE', new THREE.Vector3(-1.5, 0, -8.5)),
+  EnemyBase.createInstance('e_soldier_1', 'SOLDIER', new THREE.Vector3(1.5, 0, -7.5)),
+  EnemyBase.createInstance('e_alien_1', 'ALIEN', new THREE.Vector3(4.0, 0, -9.0)),
+  EnemyBase.createInstance('e_drone_1', 'DRONE', new THREE.Vector3(-4.0, 2.2, -7.0)),
+  EnemyBase.createInstance('e_drone_2', 'DRONE', new THREE.Vector3(3.5, 2.5, -8.0)),
+  EnemyBase.createInstance('e_boss_1', 'BOSS', new THREE.Vector3(0, 0, -12.0))
+];
+
 export const EnemyManager: React.FC = () => {
-  const [enemies, setEnemies] = useState<EnemyInstance[]>([]);
+  // Always initialize with active enemy roster so 3D bots render immediately
+  const [enemies, setEnemies] = useState<EnemyInstance[]>(createDefaultEnemies);
   const registerHit = useGameStore((s) => s.registerHit);
   const gamePhase = useGameStore((s) => s.gamePhase);
   const currentWeaponId = useGameStore((s) => s.currentWeapon);
 
-  // Initialize Level Enemy Roster
+  // Reset enemies when starting/restarting game
   useEffect(() => {
-    if (gamePhase !== 'PLAYING') return;
-
-    const initialEnemies: EnemyInstance[] = [
-      EnemyBase.createInstance('e_robot_1', 'ROBOT', new THREE.Vector3(-4, 0, -8)),
-      EnemyBase.createInstance('e_zombie_1', 'ZOMBIE', new THREE.Vector3(-2, 0, -10)),
-      EnemyBase.createInstance('e_soldier_1', 'SOLDIER', new THREE.Vector3(2, 0, -9)),
-      EnemyBase.createInstance('e_alien_1', 'ALIEN', new THREE.Vector3(5, 0, -11)),
-      EnemyBase.createInstance('e_drone_1', 'DRONE', new THREE.Vector3(-5, 2.5, -9)),
-      EnemyBase.createInstance('e_drone_2', 'DRONE', new THREE.Vector3(4, 2.8, -10)),
-      EnemyBase.createInstance('e_boss_1', 'BOSS', new THREE.Vector3(0, 0, -14))
-    ];
-
-    setEnemies(initialEnemies);
+    if (gamePhase === 'PLAYING') {
+      setEnemies(createDefaultEnemies());
+    }
   }, [gamePhase]);
 
   // Raycast Hit Detection on Weapon Firing
@@ -68,8 +69,8 @@ export const EnemyManager: React.FC = () => {
           const projHead = vHead.dot(rayDir);
           const distHeadSq = vHead.lengthSq() - projHead * projHead;
 
-          const isHeadshot = projHead > 0 && distHeadSq < 0.28;
-          const isBodyHit = projBody > 0 && distBodySq < (enemy.config.boundingRadius * enemy.config.boundingRadius);
+          const isHeadshot = projHead > 0 && distHeadSq < 0.35;
+          const isBodyHit = projBody > 0 && distBodySq < (enemy.config.boundingRadius * enemy.config.boundingRadius * 1.5);
 
           if (isHeadshot || isBodyHit) {
             const rawDamage = weaponStats.damage;
@@ -77,12 +78,11 @@ export const EnemyManager: React.FC = () => {
             const newHealth = Math.max(0, enemy.health - damageGained);
             const isDead = newHealth <= 0;
 
-            // Update FSM state
             if (isDead) {
               enemy.fsm.setState('DEAD');
               soundManager.playExplosion();
 
-              // Schedule respawn after 2 seconds
+              // Respawn enemy after delay
               setTimeout(() => {
                 respawnEnemy(enemy.id);
               }, GAME_CONSTANTS.BOT_RESPAWN_TIME_MS);
@@ -91,7 +91,6 @@ export const EnemyManager: React.FC = () => {
               soundManager.playHitMarker(isHeadshot);
             }
 
-            // Register hit score in global store
             registerHit(enemy.id, isHeadshot);
 
             return {
@@ -128,7 +127,7 @@ export const EnemyManager: React.FC = () => {
     );
   };
 
-  // AI FSM Animation & Movement Loop
+  // AI FSM Animation & Patrol Loop
   useFrame((_, delta) => {
     if (gamePhase !== 'PLAYING') return;
 
@@ -137,7 +136,6 @@ export const EnemyManager: React.FC = () => {
         const state = enemy.fsm.getState();
         if (state === 'DEAD') return enemy;
 
-        // Move towards target position during PATROL or SEARCH state
         const dir = enemy.targetPosition.clone().sub(enemy.position);
         const dist = dir.length();
 
@@ -145,9 +143,9 @@ export const EnemyManager: React.FC = () => {
           const isDrone = enemy.typeId === 'DRONE';
           const newTarget = enemy.basePosition.clone().add(
             new THREE.Vector3(
-              (Math.random() - 0.5) * 8,
-              isDrone ? (Math.random() - 0.5) * 1.5 : 0,
-              (Math.random() - 0.5) * 6
+              (Math.random() - 0.5) * 6,
+              isDrone ? (Math.random() - 0.5) * 1.2 : 0,
+              (Math.random() - 0.5) * 4
             )
           );
           return { ...enemy, targetPosition: newTarget };
@@ -168,7 +166,7 @@ export const EnemyManager: React.FC = () => {
   });
 
   return (
-    <group>
+    <group position={[0, 0, 0]}>
       {enemies.map((enemy) => {
         const isDead = enemy.fsm.getState() === 'DEAD';
         if (isDead) return null;
@@ -177,17 +175,17 @@ export const EnemyManager: React.FC = () => {
 
         return (
           <group key={enemy.id} position={enemy.position.toArray()} rotation={[0, enemy.rotationY, 0]}>
-            {/* Enemy Model (GLB or Procedural Fallback) */}
+            {/* 3D Enemy Model (GLB or Procedural Fallback) */}
             <EnemyModelLoader typeId={enemy.typeId} isHit={isHitRecent} />
 
             {/* Floating Health Bar */}
-            <group position={[0, enemy.config.headOffset + 0.5, 0]}>
+            <group position={[0, enemy.config.headOffset + 0.6, 0]}>
               <mesh position={[0, 0, 0]}>
-                <planeGeometry args={[1.0, 0.1]} />
+                <planeGeometry args={[1.2, 0.14]} />
                 <meshBasicMaterial color="#000000" />
               </mesh>
-              <mesh position={[(-0.5 + (enemy.health / enemy.maxHealth) * 0.5), 0, 0.01]}>
-                <planeGeometry args={[(enemy.health / enemy.maxHealth), 0.08]} />
+              <mesh position={[(-0.6 + (enemy.health / enemy.maxHealth) * 0.6), 0, 0.01]}>
+                <planeGeometry args={[(enemy.health / enemy.maxHealth) * 1.2, 0.12]} />
                 <meshBasicMaterial color={enemy.health / enemy.maxHealth > 0.35 ? '#00f0ff' : '#ff0055'} />
               </mesh>
             </group>
